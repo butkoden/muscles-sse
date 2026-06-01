@@ -2,7 +2,16 @@ import threading
 import time
 
 import pytest
-from muscles.core import ActionDispatcher, ActionResult, ApplicationMeta, BaseStrategy, Context, register_action
+from muscles.core import (
+    ActionDispatcher,
+    ActionResult,
+    ApplicationMeta,
+    BaseStrategy,
+    Context,
+    StreamEvent,
+    StreamResult,
+    register_action,
+)
 
 from muscles_sse import (
     SseAdapter,
@@ -42,11 +51,18 @@ def test_sse_format_event():
 
 def test_sse_stream_order_from_action_iterator():
     def handler(_action, _payload, _kwargs):
-        return [
-            SseEvent(event="progress", data={"value": 10}),
-            {"event": "log", "data": {"message": "working"}},
-            SseEvent(event="result", data={"ok": True}),
-        ]
+        return ActionResult(
+            action_name="bookings.export",
+            value=StreamResult(
+                source=[
+                    StreamEvent(type="progress", data={"value": 10}),
+                    {"type": "log", "data": {"message": "working"}},
+                    StreamEvent(type="result", data={"ok": True}),
+                ]
+            ),
+            transport="sse",
+            is_stream=True,
+        )
 
     dispatcher = FakeDispatcher(handler)
     adapter = SseAdapter(dispatcher)
@@ -70,11 +86,18 @@ def test_sse_wraps_plain_result():
 
 
 def test_sse_rejects_unknown_event():
-    dispatcher = FakeDispatcher(lambda *_: [SseEvent(event="custom", data={})])
+    dispatcher = FakeDispatcher(
+        lambda *_: ActionResult(
+            action_name="bookings.export",
+            value=StreamResult(source=[{"type": "custom", "data": {}}]),
+            transport="sse",
+            is_stream=True,
+        )
+    )
     adapter = SseAdapter(dispatcher)
     chunks = list(adapter.stream_action("bookings.export").stream)
     assert "event: error" in chunks[0]
-    assert '"code": "internal_error"' in chunks[0]
+    assert '"code": "stream_error"' in chunks[0]
 
 
 def test_sse_permission_denied_blocks_stream():
@@ -118,9 +141,14 @@ def test_sse_interval_heartbeat_appears_on_quiet_stream():
     def handler(*_):
         def quiet_stream():
             time.sleep(0.05)
-            yield SseEvent(event="result", data={"ok": True})
+            yield StreamEvent(type="result", data={"ok": True})
 
-        return quiet_stream()
+        return ActionResult(
+            action_name="bookings.export",
+            value=StreamResult(source=quiet_stream()),
+            transport="sse",
+            is_stream=True,
+        )
 
     adapter = SseAdapter(
         FakeDispatcher(handler),
@@ -140,10 +168,17 @@ def test_sse_interval_heartbeat_appears_on_quiet_stream():
 def test_sse_interval_heartbeat_preserves_user_event_format():
     adapter = SseAdapter(
         FakeDispatcher(
-            lambda *_: [
-                SseEvent(event="progress", data={"step": 1}, event_id="evt-1", retry=1500),
-                SseEvent(event="result", data={"ok": True}),
-            ]
+            lambda *_: ActionResult(
+                action_name="bookings.export",
+                value=StreamResult(
+                    source=[
+                        StreamEvent(type="progress", data={"step": 1}, event_id="evt-1", metadata={"retry": 1500}),
+                        StreamEvent(type="result", data={"ok": True}),
+                    ]
+                ),
+                transport="sse",
+                is_stream=True,
+            )
         ),
         heartbeat_event="heartbeat",
         heartbeat_interval_seconds=1,
@@ -173,7 +208,14 @@ def test_sse_disconnect_stops_heartbeat_loop():
             closed.set()
 
     adapter = SseAdapter(
-        FakeDispatcher(lambda *_: BlockingSource()),
+        FakeDispatcher(
+            lambda *_: ActionResult(
+                action_name="bookings.export",
+                value=StreamResult(source=BlockingSource()),
+                transport="sse",
+                is_stream=True,
+            )
+        ),
         heartbeat_event="heartbeat",
         heartbeat_interval_seconds=0.01,
     )
@@ -201,13 +243,20 @@ def test_sse_heartbeat_backpressure_limits_source_read_ahead():
             with lock:
                 produced += 1
                 current = produced
-            return SseEvent(event="progress", data={"step": current})
+            return StreamEvent(type="progress", data={"step": current})
 
         def close(self):
             pass
 
     adapter = SseAdapter(
-        FakeDispatcher(lambda *_: FastSource()),
+        FakeDispatcher(
+            lambda *_: ActionResult(
+                action_name="bookings.export",
+                value=StreamResult(source=FastSource()),
+                transport="sse",
+                is_stream=True,
+            )
+        ),
         heartbeat_event="heartbeat",
         heartbeat_interval_seconds=1,
     )
@@ -267,10 +316,15 @@ def test_sse_unknown_error_maps_to_generic():
 def test_sse_stream_emits_error_event_when_generator_crashes():
     def handler(*_):
         def gen():
-            yield SseEvent(event="progress", data={"step": 1})
+            yield StreamEvent(type="progress", data={"step": 1})
             raise RuntimeError("stream failed")
 
-        return gen()
+        return ActionResult(
+            action_name="bookings.export",
+            value=StreamResult(source=gen()),
+            transport="sse",
+            is_stream=True,
+        )
 
     adapter = SseAdapter(FakeDispatcher(handler))
     chunks = list(adapter.stream_action("bookings.export").stream)
@@ -291,8 +345,8 @@ def test_sse_with_real_core_dispatcher_unwraps_action_result_stream():
     app = _App()
 
     def stream_booking(_payload, _context):
-        yield {"event": "progress", "data": {"step": 1}}
-        yield {"event": "result", "data": {"ok": True}}
+        yield StreamEvent(type="progress", data={"step": 1})
+        yield StreamEvent(type="result", data={"ok": True})
 
     register_action(
         app,
@@ -327,9 +381,11 @@ def test_sse_action_result_with_is_stream_true_streams_iterable_items():
     dispatcher = FakeDispatcher(
         lambda *_: ActionResult(
             action_name="bookings.stream",
-            value=(
-                {"event": "progress", "data": {"step": 1}},
-                {"event": "result", "data": {"ok": True}},
+            value=StreamResult(
+                source=(
+                    StreamEvent(type="progress", data={"step": 1}),
+                    StreamEvent(type="result", data={"ok": True}),
+                )
             ),
             transport="sse",
             is_stream=True,
