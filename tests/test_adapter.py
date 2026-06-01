@@ -158,21 +158,22 @@ def test_sse_interval_heartbeat_preserves_user_event_format():
 
 def test_sse_disconnect_stops_heartbeat_loop():
     closed = threading.Event()
+    exited = threading.Event()
 
-    class QuietSource:
+    class BlockingSource:
         def __iter__(self):
             return self
 
         def __next__(self):
-            while not closed.wait(0.005):
-                pass
+            closed.wait()
+            exited.set()
             raise StopIteration
 
         def close(self):
             closed.set()
 
     adapter = SseAdapter(
-        FakeDispatcher(lambda *_: QuietSource()),
+        FakeDispatcher(lambda *_: BlockingSource()),
         heartbeat_event="heartbeat",
         heartbeat_interval_seconds=0.01,
     )
@@ -184,6 +185,42 @@ def test_sse_disconnect_stops_heartbeat_loop():
 
     assert "event: heartbeat" in first_chunk
     assert closed.wait(0.1) is True
+    assert exited.wait(0.1) is True
+
+
+def test_sse_heartbeat_backpressure_limits_source_read_ahead():
+    produced = 0
+    lock = threading.Lock()
+
+    class FastSource:
+        def __iter__(self):
+            return self
+
+        def __next__(self):
+            nonlocal produced
+            with lock:
+                produced += 1
+                current = produced
+            return SseEvent(event="progress", data={"step": current})
+
+        def close(self):
+            pass
+
+    adapter = SseAdapter(
+        FakeDispatcher(lambda *_: FastSource()),
+        heartbeat_event="heartbeat",
+        heartbeat_interval_seconds=1,
+    )
+    stream = adapter.stream_action("bookings.export").stream
+    try:
+        next(iter(stream))
+        time.sleep(0.05)
+        with lock:
+            read_ahead = produced
+    finally:
+        stream.close()
+
+    assert read_ahead <= 3
 
 
 def test_sse_response_headers_defaults():

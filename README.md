@@ -52,6 +52,10 @@ User events keep their existing SSE format. Closing the response stream signals
 the heartbeat worker to stop and closes the underlying source when it supports
 `close()`.
 
+Backpressure is preserved with a bounded one-item transport queue. For safe
+disconnects, long-blocking sources should be cooperative: their `close()` method
+must unblock the active `next()` call.
+
 Русский:
 
 ```python
@@ -73,6 +77,10 @@ data: {"ok": true}
 Пользовательские события сохраняют текущий SSE-формат. Закрытие response stream
 останавливает heartbeat worker и закрывает исходный stream, если он поддерживает
 `close()`.
+
+Backpressure сохраняется через bounded transport queue на один элемент. Для
+безопасного disconnect долгие blocking sources должны быть cooperative: их
+`close()` должен разблокировать активный вызов `next()`.
 
 ### Run tests
 

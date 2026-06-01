@@ -55,6 +55,7 @@ class SseAdapter:
 
     allowed_events = {"progress", "log", "result", "error"}
     default_heartbeat_interval_seconds = 15.0
+    stream_queue_size = 1
     worker_join_timeout_seconds = 0.1
 
     def __init__(
@@ -129,8 +130,17 @@ class SseAdapter:
         event_name: str,
         interval_seconds: float,
     ) -> Iterator[str]:
-        chunks: queue.Queue[tuple[str, str | None]] = queue.Queue()
+        chunks: queue.Queue[tuple[str, str | None]] = queue.Queue(maxsize=self.stream_queue_size)
         stop = threading.Event()
+
+        def put_chunk(kind: str, chunk: str | None) -> bool:
+            while not stop.is_set():
+                try:
+                    chunks.put((kind, chunk), timeout=self.worker_join_timeout_seconds)
+                    return True
+                except queue.Full:
+                    continue
+            return False
 
         def read_source() -> None:
             try:
@@ -139,25 +149,24 @@ class SseAdapter:
                         item = next(source)
                         chunk = self.format_event(self._coerce_event(item))
                     except StopIteration:
-                        chunks.put(("done", None))
+                        put_chunk("done", None)
                         break
                     except Exception as exc:
-                        chunks.put(
-                            (
-                                "chunk",
-                                self.format_event(
-                                    SseEvent(
-                                        event="error",
-                                        data={"code": self._map_error(exc).code, "message": str(exc)},
-                                    )
-                                ),
-                            )
+                        put_chunk(
+                            "chunk",
+                            self.format_event(
+                                SseEvent(
+                                    event="error",
+                                    data={"code": self._map_error(exc).code, "message": str(exc)},
+                                )
+                            ),
                         )
-                        chunks.put(("done", None))
+                        put_chunk("done", None)
                         break
                     if stop.is_set():
                         break
-                    chunks.put(("chunk", chunk))
+                    if not put_chunk("chunk", chunk):
+                        break
             finally:
                 self._close_source(source)
 
