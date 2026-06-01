@@ -6,6 +6,8 @@ import threading
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Iterator, Mapping, Protocol
 
+from muscles.core import StreamEvent, stream_events
+
 
 @dataclass(frozen=True)
 class SseEvent:
@@ -101,26 +103,18 @@ class SseAdapter:
             else isinstance(result, Iterable) and not isinstance(result, (str, bytes, bytearray, dict))
         )
         if should_stream:
-            source = iter(result)
+            source = iter(stream_events(result))
             if self.heartbeat_event:
                 interval = self.heartbeat_interval_seconds or self.default_heartbeat_interval_seconds
-                yield from self._stream_source_with_heartbeat(source, self.heartbeat_event, interval)
+                yield from self._stream_source_with_heartbeat(source, self.heartbeat_event, interval, close_target=result)
                 return
             try:
                 for item in source:
-                    try:
-                        yield self.format_event(self._coerce_event(item))
-                    except Exception as exc:
-                        yield self.format_event(
-                            SseEvent(event="error", data={"code": self._map_error(exc).code, "message": str(exc)})
-                        )
-                        break
+                    yield self.format_event(item)
             except Exception as exc:
                 yield self.format_event(SseEvent(event="error", data={"code": self._map_error(exc).code, "message": str(exc)}))
             finally:
-                close = getattr(source, "close", None)
-                if callable(close):
-                    close()
+                self._close_source(source)
             return
         yield self.format_event(SseEvent(event="result", data=result))
 
@@ -129,6 +123,7 @@ class SseAdapter:
         source: Iterator[Any],
         event_name: str,
         interval_seconds: float,
+        close_target: Any | None = None,
     ) -> Iterator[str]:
         chunks: queue.Queue[tuple[str, str | None]] = queue.Queue(maxsize=self.stream_queue_size)
         stop = threading.Event()
@@ -147,7 +142,7 @@ class SseAdapter:
                 while not stop.is_set():
                     try:
                         item = next(source)
-                        chunk = self.format_event(self._coerce_event(item))
+                        chunk = self.format_event(item)
                     except StopIteration:
                         put_chunk("done", None)
                         break
@@ -169,6 +164,8 @@ class SseAdapter:
                         break
             finally:
                 self._close_source(source)
+                if close_target is not None:
+                    self._close_source(close_target)
 
         worker = threading.Thread(target=read_source, daemon=True)
         worker.start()
@@ -186,32 +183,20 @@ class SseAdapter:
         finally:
             stop.set()
             self._close_source(source)
+            if close_target is not None:
+                self._close_source(close_target)
             worker.join(timeout=min(interval_seconds, self.worker_join_timeout_seconds))
 
     @staticmethod
     def _close_source(source: Iterator[Any]) -> None:
         close = getattr(source, "close", None)
+        if close is None:
+            close = getattr(source, "close_source", None)
         if callable(close):
             try:
                 close()
             except (RuntimeError, ValueError):
                 pass
-
-    def _coerce_event(self, item: Any) -> SseEvent:
-        if isinstance(item, SseEvent):
-            if item.event not in self.allowed_events and item.event != (self.heartbeat_event or ""):
-                raise ValueError(f"Unknown SSE event type: {item.event}")
-            return item
-        if isinstance(item, Mapping):
-            event = str(item.get("event", "progress"))
-            data = item.get("data")
-            event_id = item.get("id")
-            retry = item.get("retry")
-            coerced = SseEvent(event=event, data=data, event_id=event_id, retry=retry)
-            if coerced.event not in self.allowed_events and coerced.event != (self.heartbeat_event or ""):
-                raise ValueError(f"Unknown SSE event type: {coerced.event}")
-            return coerced
-        raise TypeError("SSE stream items must be SseEvent or mapping")
 
     @staticmethod
     def _map_error(exc: Exception) -> SseStreamError:
@@ -223,13 +208,17 @@ class SseAdapter:
         return SseStreamError(str(exc))
 
     @staticmethod
-    def format_event(event: SseEvent) -> str:
+    def format_event(event: SseEvent | StreamEvent) -> str:
         lines = []
-        if event.event_id is not None:
-            lines.append(f"id: {event.event_id}")
-        if event.retry is not None:
-            lines.append(f"retry: {event.retry}")
-        lines.append(f"event: {event.event}")
+        event_id = getattr(event, "event_id", None)
+        metadata = getattr(event, "metadata", {}) or {}
+        retry = getattr(event, "retry", None) or metadata.get("retry")
+        event_name = getattr(event, "event", None) or getattr(event, "type")
+        if event_id is not None:
+            lines.append(f"id: {event_id}")
+        if retry is not None:
+            lines.append(f"retry: {retry}")
+        lines.append(f"event: {event_name}")
         lines.append(f"data: {json.dumps(event.data, ensure_ascii=False, default=str)}")
         lines.append("")
         return "\n".join(lines)

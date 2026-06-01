@@ -32,6 +32,10 @@ This keeps SSE as a thin delivery layer. Business logic stays in Muscles actions
 
 English:
 
+SSE serializes core `StreamEvent` items from `StreamResult`. Business events
+come from `muscles.core`; this package owns only SSE wire formatting and
+transport heartbeat/backpressure/disconnect behavior.
+
 ```python
 adapter = SseAdapter(
     dispatcher,
@@ -57,6 +61,10 @@ disconnects, long-blocking sources should be cooperative: their `close()` method
 must unblock the active `next()` call.
 
 Русский:
+
+SSE сериализует core `StreamEvent` из `StreamResult`. Business events приходят
+из `muscles.core`; этот пакет отвечает только за SSE wire format и transport
+heartbeat/backpressure/disconnect поведение.
 
 ```python
 adapter = SseAdapter(
