@@ -17,3 +17,17 @@ over SSE while keeping the underlying workflow in the Muscles application model.
 ## Initial Goal
 
 Expose typed progress/log/result events from a Muscles action as an SSE stream.
+
+## Current Stage (Issue #1)
+
+Implemented typed SSE adapter:
+
+- event model: `progress`, `log`, `result`, `error`;
+- strict unknown-event rejection;
+- deterministic SSE wire formatting.
+
+### Run tests
+
+```bash
+python -m pytest -q
+```
