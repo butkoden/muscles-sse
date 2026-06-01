@@ -1,3 +1,6 @@
+import threading
+import time
+
 import pytest
 from muscles.core import ActionDispatcher, ActionResult, ApplicationMeta, BaseStrategy, Context, register_action
 
@@ -111,14 +114,76 @@ def test_sse_disconnect_closes_source():
     assert closed["ok"] is True
 
 
-def test_sse_heartbeat_policy():
+def test_sse_interval_heartbeat_appears_on_quiet_stream():
+    def handler(*_):
+        def quiet_stream():
+            time.sleep(0.05)
+            yield SseEvent(event="result", data={"ok": True})
+
+        return quiet_stream()
+
     adapter = SseAdapter(
-        FakeDispatcher(lambda *_: [SseEvent(event="progress", data={"step": 1})]),
+        FakeDispatcher(handler),
         heartbeat_event="heartbeat",
+        heartbeat_interval_seconds=0.01,
+    )
+    stream = adapter.stream_action("bookings.export").stream
+    try:
+        first_chunk = next(iter(stream))
+    finally:
+        stream.close()
+
+    assert "event: heartbeat" in first_chunk
+    assert 'data: {"ok": true}' in first_chunk
+
+
+def test_sse_interval_heartbeat_preserves_user_event_format():
+    adapter = SseAdapter(
+        FakeDispatcher(
+            lambda *_: [
+                SseEvent(event="progress", data={"step": 1}, event_id="evt-1", retry=1500),
+                SseEvent(event="result", data={"ok": True}),
+            ]
+        ),
+        heartbeat_event="heartbeat",
+        heartbeat_interval_seconds=1,
     )
     chunks = list(adapter.stream_action("bookings.export").stream)
+    assert len(chunks) == 2
+    assert "id: evt-1" in chunks[0]
+    assert "retry: 1500" in chunks[0]
     assert "event: progress" in chunks[0]
-    assert "event: heartbeat" in chunks[1]
+    assert "event: result" in chunks[1]
+
+
+def test_sse_disconnect_stops_heartbeat_loop():
+    closed = threading.Event()
+
+    class QuietSource:
+        def __iter__(self):
+            return self
+
+        def __next__(self):
+            while not closed.wait(0.005):
+                pass
+            raise StopIteration
+
+        def close(self):
+            closed.set()
+
+    adapter = SseAdapter(
+        FakeDispatcher(lambda *_: QuietSource()),
+        heartbeat_event="heartbeat",
+        heartbeat_interval_seconds=0.01,
+    )
+    stream = adapter.stream_action("bookings.export").stream
+    try:
+        first_chunk = next(iter(stream))
+    finally:
+        stream.close()
+
+    assert "event: heartbeat" in first_chunk
+    assert closed.wait(0.1) is True
 
 
 def test_sse_response_headers_defaults():
