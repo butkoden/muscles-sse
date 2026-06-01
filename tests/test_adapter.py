@@ -1,4 +1,5 @@
 import pytest
+from muscles.core import ApplicationMeta, BaseStrategy, Context, register_action, ActionDispatcher
 
 from muscles_sse import (
     SseAdapter,
@@ -68,8 +69,9 @@ def test_sse_wraps_plain_result():
 def test_sse_rejects_unknown_event():
     dispatcher = FakeDispatcher(lambda *_: [SseEvent(event="custom", data={})])
     adapter = SseAdapter(dispatcher)
-    with pytest.raises(ValueError):
-        list(adapter.stream_action("bookings.export").stream)
+    chunks = list(adapter.stream_action("bookings.export").stream)
+    assert "event: error" in chunks[0]
+    assert '"code": "internal_error"' in chunks[0]
 
 
 def test_sse_permission_denied_blocks_stream():
@@ -158,3 +160,46 @@ def test_sse_unknown_error_maps_to_generic():
     adapter = SseAdapter(FakeDispatcher(handler))
     with pytest.raises(SseStreamError):
         adapter.stream_action("bookings.export")
+
+
+def test_sse_stream_emits_error_event_when_generator_crashes():
+    def handler(*_):
+        def gen():
+            yield SseEvent(event="progress", data={"step": 1})
+            raise RuntimeError("stream failed")
+
+        return gen()
+
+    adapter = SseAdapter(FakeDispatcher(handler))
+    chunks = list(adapter.stream_action("bookings.export").stream)
+    assert "event: progress" in chunks[0]
+    assert "event: error" in chunks[1]
+    assert '"message": "stream failed"' in chunks[1]
+
+
+class _EchoStrategy(BaseStrategy):
+    def execute(self, *args, **kwargs):
+        return kwargs
+
+
+def test_sse_with_real_core_dispatcher_unwraps_action_result_stream():
+    class _App(metaclass=ApplicationMeta):
+        context = Context(_EchoStrategy)
+
+    app = _App()
+
+    def stream_booking(_payload, _context):
+        yield {"event": "progress", "data": {"step": 1}}
+        yield {"event": "result", "data": {"ok": True}}
+
+    register_action(
+        app,
+        name="bookings.stream",
+        input_schema={"type": "object", "properties": {}},
+        transports=["sse"],
+        handler=stream_booking,
+    )
+    adapter = SseAdapter(ActionDispatcher(app))
+    chunks = list(adapter.stream_action("bookings.stream", {}).stream)
+    assert "event: progress" in chunks[0]
+    assert "event: result" in chunks[1]

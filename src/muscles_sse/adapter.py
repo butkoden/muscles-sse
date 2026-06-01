@@ -76,12 +76,28 @@ class SseAdapter:
             stream = self._with_heartbeat(stream, self.heartbeat_event)
         return SseResponse(stream=stream)
 
+    @staticmethod
+    def _unwrap_result(result: Any) -> Any:
+        # muscles.core.ActionDispatcher returns ActionResult with value/is_stream.
+        if hasattr(result, "value") and hasattr(result, "is_stream"):
+            return result.value
+        return result
+
     def _iter_result(self, result: Any) -> Iterator[str]:
+        result = self._unwrap_result(result)
         if isinstance(result, Iterable) and not isinstance(result, (str, bytes, bytearray, dict)):
             source = iter(result)
             try:
                 for item in source:
-                    yield self.format_event(self._coerce_event(item))
+                    try:
+                        yield self.format_event(self._coerce_event(item))
+                    except Exception as exc:
+                        yield self.format_event(
+                            SseEvent(event="error", data={"code": self._map_error(exc).code, "message": str(exc)})
+                        )
+                        break
+            except Exception as exc:
+                yield self.format_event(SseEvent(event="error", data={"code": self._map_error(exc).code, "message": str(exc)}))
             finally:
                 close = getattr(source, "close", None)
                 if callable(close):
