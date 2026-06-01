@@ -14,6 +14,22 @@ over SSE while keeping the underlying workflow in the Muscles application model.
   introduced.
 - The package must be usable from ASGI without forcing unrelated runtime choices.
 
-## Initial Goal
+## Current Stage (Issue #1)
 
-Expose typed progress/log/result events from a Muscles action as an SSE stream.
+Implemented SSE transport projection over Muscles action execution:
+
+- action dispatch path: `dispatcher.execute(action, payload, transport="sse")`;
+- typed events: `progress`, `log`, `result`, `error`;
+- wire formatting: `id`, `event`, `retry`, `data`;
+- `SseResponse` with SSE headers and status;
+- heartbeat policy (optional);
+- safe source close on stream completion/disconnect;
+- error mapping: permission/validation/internal.
+
+This keeps SSE as a thin delivery layer. Business logic stays in Muscles actions.
+
+### Run tests
+
+```bash
+python -m pytest -q
+```
