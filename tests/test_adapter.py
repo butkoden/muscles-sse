@@ -1,5 +1,5 @@
 import pytest
-from muscles.core import ApplicationMeta, BaseStrategy, Context, register_action, ActionDispatcher
+from muscles.core import ActionDispatcher, ActionResult, ApplicationMeta, BaseStrategy, Context, register_action
 
 from muscles_sse import (
     SseAdapter,
@@ -201,5 +201,39 @@ def test_sse_with_real_core_dispatcher_unwraps_action_result_stream():
     )
     adapter = SseAdapter(ActionDispatcher(app))
     chunks = list(adapter.stream_action("bookings.stream", {}).stream)
+    assert "event: progress" in chunks[0]
+    assert "event: result" in chunks[1]
+
+
+def test_sse_action_result_with_is_stream_false_keeps_list_as_plain_result():
+    dispatcher = FakeDispatcher(
+        lambda *_: ActionResult(
+            action_name="bookings.list",
+            value=[{"id": 1, "title": "A"}],
+            transport="sse",
+            is_stream=False,
+        )
+    )
+    adapter = SseAdapter(dispatcher)
+    chunks = list(adapter.stream_action("bookings.list").stream)
+    assert len(chunks) == 1
+    assert "event: result" in chunks[0]
+    assert '"title": "A"' in chunks[0]
+
+
+def test_sse_action_result_with_is_stream_true_streams_iterable_items():
+    dispatcher = FakeDispatcher(
+        lambda *_: ActionResult(
+            action_name="bookings.stream",
+            value=(
+                {"event": "progress", "data": {"step": 1}},
+                {"event": "result", "data": {"ok": True}},
+            ),
+            transport="sse",
+            is_stream=True,
+        )
+    )
+    adapter = SseAdapter(dispatcher)
+    chunks = list(adapter.stream_action("bookings.stream").stream)
     assert "event: progress" in chunks[0]
     assert "event: result" in chunks[1]

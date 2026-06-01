@@ -77,15 +77,20 @@ class SseAdapter:
         return SseResponse(stream=stream)
 
     @staticmethod
-    def _unwrap_result(result: Any) -> Any:
+    def _unwrap_result(result: Any) -> tuple[Any, bool | None]:
         # muscles.core.ActionDispatcher returns ActionResult with value/is_stream.
         if hasattr(result, "value") and hasattr(result, "is_stream"):
-            return result.value
-        return result
+            return result.value, bool(result.is_stream)
+        return result, None
 
     def _iter_result(self, result: Any) -> Iterator[str]:
-        result = self._unwrap_result(result)
-        if isinstance(result, Iterable) and not isinstance(result, (str, bytes, bytearray, dict)):
+        result, is_stream = self._unwrap_result(result)
+        should_stream = (
+            is_stream
+            if is_stream is not None
+            else isinstance(result, Iterable) and not isinstance(result, (str, bytes, bytearray, dict))
+        )
+        if should_stream:
             source = iter(result)
             try:
                 for item in source:
