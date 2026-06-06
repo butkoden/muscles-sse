@@ -1,5 +1,5 @@
 import pytest
-from muscles.core import ActionDispatcher, ActionResult, ApplicationMeta, BaseStrategy, Context, register_action
+from muscles.core import ActionDispatcher, ActionResult, ApplicationMeta, BaseStrategy, Context
 
 from muscles_sse import (
     SseAdapter,
@@ -188,17 +188,15 @@ def test_sse_with_real_core_dispatcher_unwraps_action_result_stream():
 
     app = _App()
 
+    @app.action(
+        name="bookings.stream",
+        input_schema={"type": "object", "properties": {}},
+        transports=["sse"],
+    )
     def stream_booking(_payload, _context):
         yield {"event": "progress", "data": {"step": 1}}
         yield {"event": "result", "data": {"ok": True}}
 
-    register_action(
-        app,
-        name="bookings.stream",
-        input_schema={"type": "object", "properties": {}},
-        transports=["sse"],
-        handler=stream_booking,
-    )
     adapter = SseAdapter(ActionDispatcher(app))
     chunks = list(adapter.stream_action("bookings.stream", {}).stream)
     assert "event: progress" in chunks[0]
