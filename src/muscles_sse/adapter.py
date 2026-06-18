@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import queue
+import threading
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Iterator, Mapping, Protocol
 
@@ -52,10 +54,21 @@ class SseAdapter:
     """SSE transport projection over Muscles action execution."""
 
     allowed_events = {"progress", "log", "result", "error"}
+    default_heartbeat_interval_seconds = 15.0
+    stream_queue_size = 1
+    worker_join_timeout_seconds = 0.1
 
-    def __init__(self, dispatcher: ActionDispatcher, heartbeat_event: str | None = None):
+    def __init__(
+        self,
+        dispatcher: ActionDispatcher,
+        heartbeat_event: str | None = None,
+        heartbeat_interval_seconds: float | None = None,
+    ):
         self.dispatcher = dispatcher
         self.heartbeat_event = heartbeat_event
+        if heartbeat_interval_seconds is not None and heartbeat_interval_seconds <= 0:
+            raise ValueError("heartbeat_interval_seconds must be greater than 0")
+        self.heartbeat_interval_seconds = heartbeat_interval_seconds
 
     def stream_action(
         self,
@@ -71,10 +84,7 @@ class SseAdapter:
             mapped = self._map_error(exc)
             raise mapped from exc
 
-        stream = self._iter_result(result)
-        if self.heartbeat_event:
-            stream = self._with_heartbeat(stream, self.heartbeat_event)
-        return SseResponse(stream=stream)
+        return SseResponse(stream=self._iter_result(result))
 
     @staticmethod
     def _unwrap_result(result: Any) -> tuple[Any, bool | None]:
@@ -92,6 +102,10 @@ class SseAdapter:
         )
         if should_stream:
             source = iter(result)
+            if self.heartbeat_event:
+                interval = self.heartbeat_interval_seconds or self.default_heartbeat_interval_seconds
+                yield from self._stream_source_with_heartbeat(source, self.heartbeat_event, interval)
+                return
             try:
                 for item in source:
                     try:
@@ -110,10 +124,78 @@ class SseAdapter:
             return
         yield self.format_event(SseEvent(event="result", data=result))
 
-    def _with_heartbeat(self, stream: Iterable[str], event_name: str) -> Iterator[str]:
-        for chunk in stream:
-            yield chunk
-            yield self.format_event(SseEvent(event=event_name, data={"ok": True}))
+    def _stream_source_with_heartbeat(
+        self,
+        source: Iterator[Any],
+        event_name: str,
+        interval_seconds: float,
+    ) -> Iterator[str]:
+        chunks: queue.Queue[tuple[str, str | None]] = queue.Queue(maxsize=self.stream_queue_size)
+        stop = threading.Event()
+
+        def put_chunk(kind: str, chunk: str | None) -> bool:
+            while not stop.is_set():
+                try:
+                    chunks.put((kind, chunk), timeout=self.worker_join_timeout_seconds)
+                    return True
+                except queue.Full:
+                    continue
+            return False
+
+        def read_source() -> None:
+            try:
+                while not stop.is_set():
+                    try:
+                        item = next(source)
+                        chunk = self.format_event(self._coerce_event(item))
+                    except StopIteration:
+                        put_chunk("done", None)
+                        break
+                    except Exception as exc:
+                        put_chunk(
+                            "chunk",
+                            self.format_event(
+                                SseEvent(
+                                    event="error",
+                                    data={"code": self._map_error(exc).code, "message": str(exc)},
+                                )
+                            ),
+                        )
+                        put_chunk("done", None)
+                        break
+                    if stop.is_set():
+                        break
+                    if not put_chunk("chunk", chunk):
+                        break
+            finally:
+                self._close_source(source)
+
+        worker = threading.Thread(target=read_source, daemon=True)
+        worker.start()
+        try:
+            while True:
+                try:
+                    kind, chunk = chunks.get(timeout=interval_seconds)
+                except queue.Empty:
+                    yield self.format_event(SseEvent(event=event_name, data={"ok": True}))
+                    continue
+                if kind == "done":
+                    break
+                if chunk is not None:
+                    yield chunk
+        finally:
+            stop.set()
+            self._close_source(source)
+            worker.join(timeout=min(interval_seconds, self.worker_join_timeout_seconds))
+
+    @staticmethod
+    def _close_source(source: Iterator[Any]) -> None:
+        close = getattr(source, "close", None)
+        if callable(close):
+            try:
+                close()
+            except (RuntimeError, ValueError):
+                pass
 
     def _coerce_event(self, item: Any) -> SseEvent:
         if isinstance(item, SseEvent):
