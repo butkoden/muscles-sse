@@ -5,6 +5,14 @@ Server-Sent Events adapter for Muscles streaming use cases.
 This package should provide progress, logs, notifications, and AI output streams
 over SSE while keeping the underlying workflow in the Muscles application model.
 
+## Related Repositories
+
+- [`muscles`](https://github.com/butkoden/muscles) - core `StreamResult`, `StreamEvent`, actions and dispatcher.
+- [`muscles-asgi`](https://github.com/butkoden/muscles-asgi) - HTTP runtime that can expose SSE responses.
+- [`muscles-ai`](https://github.com/butkoden/muscles-ai) - AI/RAG actions that may produce streaming output.
+- [`muscles-jsonrpc`](https://github.com/butkoden/muscles-jsonrpc) - sibling protocol projection over actions.
+- [`muscles-benchmarks`](https://github.com/butkoden/muscles-benchmarks) - streaming regression checks.
+
 ## Concept Guardrails
 
 - SSE streams must be backed by Muscles actions/events/jobs, not ad hoc handlers.
