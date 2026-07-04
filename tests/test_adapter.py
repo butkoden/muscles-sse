@@ -1,5 +1,17 @@
 import pytest
-from muscles.core import ActionDispatcher, ActionResult, ApplicationMeta, BaseStrategy, Context
+from muscles.core import (
+    ActionDispatcher,
+    ActionExecutionError,
+    ActionNotFound,
+    ActionPermissionDenied,
+    ActionResult,
+    ActionValidationError,
+    ApplicationMeta,
+    BaseStrategy,
+    Context,
+    StreamEvent,
+    StreamResult,
+)
 
 from muscles_sse import (
     SseAdapter,
@@ -71,7 +83,7 @@ def test_sse_rejects_unknown_event():
     adapter = SseAdapter(dispatcher)
     chunks = list(adapter.stream_action("bookings.export").stream)
     assert "event: error" in chunks[0]
-    assert '"code": "internal_error"' in chunks[0]
+    assert '"code": "stream_error"' in chunks[0]
 
 
 def test_sse_permission_denied_blocks_stream():
@@ -235,3 +247,95 @@ def test_sse_action_result_with_is_stream_true_streams_iterable_items():
     chunks = list(adapter.stream_action("bookings.stream").stream)
     assert "event: progress" in chunks[0]
     assert "event: result" in chunks[1]
+
+
+def test_sse_from_application_uses_core_action_dispatcher():
+    class _App(metaclass=ApplicationMeta):
+        context = Context(_EchoStrategy)
+
+    app = _App()
+
+    @app.action(
+        name="bookings.from_app",
+        input_schema={"type": "object", "properties": {}},
+        transports=["sse"],
+    )
+    def stream_booking(_payload, context):
+        assert context.transport == "sse"
+        yield {"event": "result", "data": {"ok": True}}
+
+    adapter = SseAdapter.from_application(app)
+    chunks = list(adapter.stream_action("bookings.from_app", {}).stream)
+    assert "event: result" in chunks[0]
+    assert '"ok": true' in chunks[0]
+
+
+def test_sse_projects_core_stream_events_and_preserves_error_payload():
+    dispatcher = FakeDispatcher(
+        lambda *_: ActionResult(
+            action_name="bookings.stream",
+            value=StreamResult(
+                source=[
+                    StreamEvent(type="progress", data={"step": 1}, event_id="progress-1"),
+                    StreamEvent(
+                        type="error",
+                        data={
+                            "code": "action_validation_error",
+                            "message": "invalid",
+                            "data": {"path": ["title"]},
+                        },
+                        event_id="error-1",
+                    ),
+                ]
+            ),
+            transport="sse",
+            is_stream=True,
+        )
+    )
+
+    adapter = SseAdapter(dispatcher)
+    chunks = list(adapter.stream_action("bookings.stream").stream)
+
+    assert "id: progress-1" in chunks[0]
+    assert "event: progress" in chunks[0]
+    assert "id: error-1" in chunks[1]
+    assert "event: error" in chunks[1]
+    assert '"code": "action_validation_error"' in chunks[1]
+    assert '"path": ["title"]' in chunks[1]
+
+
+@pytest.mark.parametrize(
+    ("core_error", "expected_type", "expected_code"),
+    [
+        (ActionNotFound("bookings.missing", "missing"), SseStreamError, "action_not_found"),
+        (
+            ActionValidationError("bookings.create", "invalid", data={"path": ["title"]}),
+            SseValidationError,
+            "action_validation_error",
+        ),
+        (
+            ActionPermissionDenied("bookings.secret", "denied", data={"policy": "admin"}),
+            SsePermissionDenied,
+            "action_permission_denied",
+        ),
+        (
+            ActionExecutionError("bookings.export", "failed", data={"trace_id": "abc"}),
+            SseStreamError,
+            "action_execution_error",
+        ),
+    ],
+)
+def test_sse_maps_core_action_errors_with_structured_payload(core_error, expected_type, expected_code):
+    def handler(*_):
+        raise core_error
+
+    adapter = SseAdapter(FakeDispatcher(handler))
+
+    with pytest.raises(expected_type) as raised:
+        adapter.stream_action(core_error.action_name or "bookings.action")
+
+    assert raised.value.code == expected_code
+    assert raised.value.action_name == core_error.action_name
+    assert raised.value.message == core_error.message
+    assert raised.value.data == core_error.data
+    assert raised.value.status == core_error.status

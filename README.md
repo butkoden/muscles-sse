@@ -19,12 +19,14 @@ over SSE while keeping the underlying workflow in the Muscles application model.
 Implemented SSE transport projection over Muscles action execution:
 
 - action dispatch path: `dispatcher.execute(action, payload, transport="sse")`;
+- application facade: `SseAdapter.from_application(app)` backed by core `ActionDispatcher`;
+- stream normalization delegates to core `stream_events()` / `StreamResult`;
 - typed events: `progress`, `log`, `result`, `error`;
 - wire formatting: `id`, `event`, `retry`, `data`;
 - `SseResponse` with SSE headers and status;
 - heartbeat policy (optional);
 - safe source close on stream completion/disconnect;
-- error mapping: permission/validation/internal.
+- structured core action error mapping: not found, validation, permission, execution.
 
 This keeps SSE as a thin delivery layer. Business logic stays in Muscles actions.
 

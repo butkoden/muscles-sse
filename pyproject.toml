@@ -8,7 +8,7 @@ version = "1.0.0"
 description = "SSE adapter for Muscles streaming events"
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = []
+dependencies = ["muscles @ git+https://github.com/butkoden/muscles.git"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
