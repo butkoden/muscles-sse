@@ -12,6 +12,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: butkoden/muscles
+          ref: feature/task-57-core-rc-readiness
           path: muscles
       - uses: actions/setup-python@v5
         with:
