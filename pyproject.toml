@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "muscles-sse"
-version = "1.0.1"
+version = "1.0.2"
 description = "SSE adapter for Muscles streaming events"
 readme = "README.md"
 license = "MIT"
