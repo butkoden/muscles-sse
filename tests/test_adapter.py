@@ -1,3 +1,6 @@
+import threading
+import time
+
 import pytest
 from muscles.core import (
     ActionDispatcher,
@@ -123,14 +126,150 @@ def test_sse_disconnect_closes_source():
     assert closed["ok"] is True
 
 
-def test_sse_heartbeat_policy():
+def test_sse_heartbeat_interval_must_be_positive():
+    with pytest.raises(ValueError, match="heartbeat_interval_seconds"):
+        SseAdapter(FakeDispatcher(lambda *_: []), heartbeat_interval_seconds=0)
+
+
+def test_sse_interval_heartbeat_appears_on_quiet_stream():
+    def handler(*_):
+        def quiet_stream():
+            time.sleep(0.05)
+            yield StreamEvent(type="result", data={"ok": True})
+
+        return ActionResult(
+            action_name="bookings.export",
+            value=StreamResult(source=quiet_stream()),
+            transport="sse",
+            is_stream=True,
+        )
+
     adapter = SseAdapter(
-        FakeDispatcher(lambda *_: [SseEvent(event="progress", data={"step": 1})]),
+        FakeDispatcher(handler),
         heartbeat_event="heartbeat",
+        heartbeat_interval_seconds=0.01,
+    )
+    stream = adapter.stream_action("bookings.export").stream
+    try:
+        first_chunk = next(iter(stream))
+    finally:
+        stream.close()
+
+    assert "event: heartbeat" in first_chunk
+
+
+def test_sse_interval_heartbeat_preserves_core_event_format():
+    adapter = SseAdapter(
+        FakeDispatcher(
+            lambda *_: ActionResult(
+                action_name="bookings.export",
+                value=StreamResult(
+                    source=[
+                        StreamEvent(
+                            type="progress",
+                            data={"step": 1},
+                            event_id="evt-1",
+                            metadata={"retry": 1500},
+                        ),
+                        StreamEvent(type="result", data={"ok": True}),
+                    ]
+                ),
+                transport="sse",
+                is_stream=True,
+            )
+        ),
+        heartbeat_event="heartbeat",
+        heartbeat_interval_seconds=1,
     )
     chunks = list(adapter.stream_action("bookings.export").stream)
+
+    assert len(chunks) == 2
+    assert "id: evt-1" in chunks[0]
+    assert "retry: 1500" in chunks[0]
     assert "event: progress" in chunks[0]
-    assert "event: heartbeat" in chunks[1]
+    assert "event: result" in chunks[1]
+
+
+def test_sse_disconnect_stops_heartbeat_worker():
+    closed = threading.Event()
+    exited = threading.Event()
+
+    class BlockingSource:
+        def __iter__(self):
+            return self
+
+        def __next__(self):
+            closed.wait()
+            exited.set()
+            raise StopIteration
+
+        def close(self):
+            closed.set()
+
+    source = BlockingSource()
+    adapter = SseAdapter(
+        FakeDispatcher(
+            lambda *_: ActionResult(
+                action_name="bookings.export",
+                value=StreamResult(source=source),
+                transport="sse",
+                is_stream=True,
+            )
+        ),
+        heartbeat_event="heartbeat",
+        heartbeat_interval_seconds=0.01,
+    )
+    stream = adapter.stream_action("bookings.export").stream
+    try:
+        first_chunk = next(iter(stream))
+    finally:
+        stream.close()
+
+    assert "event: heartbeat" in first_chunk
+    assert closed.wait(0.1) is True
+    assert exited.wait(0.1) is True
+
+
+def test_sse_heartbeat_backpressure_limits_source_read_ahead():
+    produced = 0
+    lock = threading.Lock()
+
+    class FastSource:
+        def __iter__(self):
+            return self
+
+        def __next__(self):
+            nonlocal produced
+            with lock:
+                produced += 1
+                current = produced
+            return StreamEvent(type="progress", data={"step": current})
+
+        def close(self):
+            pass
+
+    adapter = SseAdapter(
+        FakeDispatcher(
+            lambda *_: ActionResult(
+                action_name="bookings.export",
+                value=StreamResult(source=FastSource()),
+                transport="sse",
+                is_stream=True,
+            )
+        ),
+        heartbeat_event="heartbeat",
+        heartbeat_interval_seconds=1,
+    )
+    stream = adapter.stream_action("bookings.export").stream
+    try:
+        next(iter(stream))
+        time.sleep(0.05)
+        with lock:
+            read_ahead = produced
+    finally:
+        stream.close()
+
+    assert read_ahead <= 3
 
 
 def test_sse_response_headers_defaults():
