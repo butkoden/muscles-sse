@@ -32,11 +32,39 @@ Implemented SSE transport projection over Muscles action execution:
 - typed events: `progress`, `log`, `result`, `error`;
 - wire formatting: `id`, `event`, `retry`, `data`;
 - `SseResponse` with SSE headers and status;
-- heartbeat policy (optional);
+- configurable interval heartbeat with bounded backpressure;
 - safe source close on stream completion/disconnect;
 - structured core action error mapping: not found, validation, permission, execution.
 
 This keeps SSE as a thin delivery layer. Business logic stays in Muscles actions.
+
+### Interval heartbeat
+
+SSE serializes core `StreamEvent` items from `StreamResult`. Business events
+come from `muscles.core`; this package owns the SSE wire format and transport
+heartbeat, backpressure, and disconnect behavior.
+
+```python
+adapter = SseAdapter(
+    dispatcher,
+    heartbeat_event="heartbeat",
+    heartbeat_interval_seconds=15,
+)
+```
+
+When the action stream is quiet longer than the configured interval, the
+transport emits a heartbeat event:
+
+```text
+event: heartbeat
+data: {"ok": true}
+```
+
+User events keep their existing SSE format. Closing the response stream stops
+the heartbeat worker and closes the underlying source when it supports
+`close()`. Backpressure is preserved with a bounded one-item queue. Long-
+blocking sources should implement a cooperative `close()` that unblocks the
+active `next()` call.
 
 ### Run tests
 

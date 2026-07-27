@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import queue
+import threading
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Iterator, Mapping, Protocol
 
@@ -96,14 +98,34 @@ class SseAdapter:
     """SSE transport projection over Muscles action execution."""
 
     allowed_events = {"progress", "log", "result", "error"}
+    default_heartbeat_interval_seconds = 15.0
+    stream_queue_size = 1
+    worker_join_timeout_seconds = 0.1
 
-    def __init__(self, dispatcher: ActionDispatcher, heartbeat_event: str | None = None):
+    def __init__(
+        self,
+        dispatcher: ActionDispatcher,
+        heartbeat_event: str | None = None,
+        heartbeat_interval_seconds: float | None = None,
+    ):
         self.dispatcher = dispatcher
         self.heartbeat_event = heartbeat_event
+        if heartbeat_interval_seconds is not None and heartbeat_interval_seconds <= 0:
+            raise ValueError("heartbeat_interval_seconds must be greater than 0")
+        self.heartbeat_interval_seconds = heartbeat_interval_seconds
 
     @classmethod
-    def from_application(cls, app, heartbeat_event: str | None = None):
-        return cls(_CoreDispatcher(app), heartbeat_event=heartbeat_event)
+    def from_application(
+        cls,
+        app,
+        heartbeat_event: str | None = None,
+        heartbeat_interval_seconds: float | None = None,
+    ):
+        return cls(
+            _CoreDispatcher(app),
+            heartbeat_event=heartbeat_event,
+            heartbeat_interval_seconds=heartbeat_interval_seconds,
+        )
 
     def stream_action(
         self,
@@ -119,10 +141,7 @@ class SseAdapter:
             mapped = self._map_error(exc)
             raise mapped from exc
 
-        stream = self._iter_result(result)
-        if self.heartbeat_event:
-            stream = self._with_heartbeat(stream, self.heartbeat_event)
-        return SseResponse(stream=stream)
+        return SseResponse(stream=self._iter_result(result))
 
     @staticmethod
     def _unwrap_result(result: Any) -> tuple[Any, bool | None]:
@@ -139,15 +158,103 @@ class SseAdapter:
             else isinstance(result, Iterable) and not isinstance(result, (str, bytes, bytearray, dict))
         )
         if should_stream:
-            for event in stream_events(self._to_core_stream(result)):
-                yield self.format_event(self._from_core_event(event))
+            core_stream = self._to_core_stream(result)
+            source = iter(stream_events(core_stream))
+            if self.heartbeat_event:
+                interval = self.heartbeat_interval_seconds or self.default_heartbeat_interval_seconds
+                yield from self._stream_source_with_heartbeat(
+                    source,
+                    self.heartbeat_event,
+                    interval,
+                    close_target=core_stream,
+                )
+                return
+            try:
+                for event in source:
+                    yield self.format_event(self._from_core_event(event))
+            finally:
+                self._close_source(source)
             return
         yield self.format_event(SseEvent(event="result", data=result))
 
-    def _with_heartbeat(self, stream: Iterable[str], event_name: str) -> Iterator[str]:
-        for chunk in stream:
-            yield chunk
-            yield self.format_event(SseEvent(event=event_name, data={"ok": True}))
+    def _stream_source_with_heartbeat(
+        self,
+        source: Iterator[StreamEvent],
+        event_name: str,
+        interval_seconds: float,
+        *,
+        close_target: StreamResult | None = None,
+    ) -> Iterator[str]:
+        chunks: queue.Queue[tuple[str, StreamEvent | None]] = queue.Queue(maxsize=self.stream_queue_size)
+        stop = threading.Event()
+
+        def put_chunk(kind: str, event: StreamEvent | None) -> bool:
+            while not stop.is_set():
+                try:
+                    chunks.put((kind, event), timeout=self.worker_join_timeout_seconds)
+                    return True
+                except queue.Full:
+                    continue
+            return False
+
+        def read_source() -> None:
+            try:
+                while not stop.is_set():
+                    try:
+                        event = next(source)
+                    except StopIteration:
+                        put_chunk("done", None)
+                        break
+                    except Exception as exc:
+                        put_chunk(
+                            "chunk",
+                            StreamEvent(
+                                type="error",
+                                data={"code": self._map_error(exc).code, "message": str(exc)},
+                            ),
+                        )
+                        put_chunk("done", None)
+                        break
+                    if not put_chunk("chunk", event):
+                        break
+            finally:
+                self._close_source(source)
+
+        worker = threading.Thread(target=read_source, daemon=True)
+        worker.start()
+        try:
+            while True:
+                try:
+                    kind, event = chunks.get(timeout=interval_seconds)
+                except queue.Empty:
+                    yield self.format_event(SseEvent(event=event_name, data={"ok": True}))
+                    continue
+                if kind == "done":
+                    break
+                if event is not None:
+                    yield self.format_event(self._from_core_event(event))
+        finally:
+            stop.set()
+            if close_target is not None:
+                self._close_stream_target(close_target)
+            self._close_source(source)
+            worker.join(timeout=min(interval_seconds, self.worker_join_timeout_seconds))
+
+    @staticmethod
+    def _close_stream_target(stream: StreamResult) -> None:
+        try:
+            stream.close_source()
+        except (RuntimeError, ValueError):
+            pass
+
+    @staticmethod
+    def _close_source(source: Any) -> None:
+        close = getattr(source, "close", None)
+        if callable(close):
+            try:
+                close()
+            except (RuntimeError, ValueError):
+                pass
 
     def _to_core_stream(self, result: Any) -> StreamResult:
         metadata: dict[str, Any] = {}
