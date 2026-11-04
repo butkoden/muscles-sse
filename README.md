@@ -22,7 +22,7 @@ over SSE while keeping the underlying workflow in the Muscles application model.
   introduced.
 - The package must be usable from ASGI without forcing unrelated runtime choices.
 
-## Current Stage (Issue #1)
+## Implemented Features
 
 Implemented SSE transport projection over Muscles action execution:
 
@@ -37,6 +37,11 @@ Implemented SSE transport projection over Muscles action execution:
 - structured core action error mapping: not found, validation, permission, execution.
 
 This keeps SSE as a thin delivery layer. Business logic stays in Muscles actions.
+
+`SseAdapter.execute()` returns an `SseResponse`, which carries the event stream
+and SSE response metadata. It is a protocol result, not a framework HTTP
+response: the hosting ASGI integration must forward its status and headers and
+stream its body to the client.
 
 ### Interval heartbeat
 

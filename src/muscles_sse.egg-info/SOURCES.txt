@@ -1,0 +1,10 @@
+README.md
+pyproject.toml
+src/muscles/sse/__init__.py
+src/muscles/sse/adapter.py
+src/muscles_sse.egg-info/PKG-INFO
+src/muscles_sse.egg-info/SOURCES.txt
+src/muscles_sse.egg-info/dependency_links.txt
+src/muscles_sse.egg-info/requires.txt
+src/muscles_sse.egg-info/top_level.txt
+tests/test_adapter.py

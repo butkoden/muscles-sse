@@ -1,0 +1,775 @@
+{
+  "version": "1.0.0",
+  "schema_version": 1,
+  "project": {
+    "name": "muscles-sse",
+    "is_monorepo": false,
+    "total_files": 8,
+    "entry_points": [],
+    "tech_stack": [
+      {
+        "name": "Python",
+        "version": null,
+        "category": "language"
+      }
+    ],
+    "entry_candidates": [],
+    "graph_mode": "flow"
+  },
+  "nodes": [
+    {
+      "id": "class:src/muscles_sse/adapter.py:ActionDispatcher",
+      "type": "class",
+      "filePath": "src/muscles_sse/adapter.py",
+      "name": "ActionDispatcher",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "class:src/muscles_sse/adapter.py:SseAdapter",
+      "type": "class",
+      "filePath": "src/muscles_sse/adapter.py",
+      "name": "SseAdapter",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "class:src/muscles_sse/adapter.py:SseEvent",
+      "type": "class",
+      "filePath": "src/muscles_sse/adapter.py",
+      "name": "SseEvent",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "class:src/muscles_sse/adapter.py:SsePermissionDenied",
+      "type": "class",
+      "filePath": "src/muscles_sse/adapter.py",
+      "name": "SsePermissionDenied",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "class:src/muscles_sse/adapter.py:SseResponse",
+      "type": "class",
+      "filePath": "src/muscles_sse/adapter.py",
+      "name": "SseResponse",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "class:src/muscles_sse/adapter.py:SseStreamError",
+      "type": "class",
+      "filePath": "src/muscles_sse/adapter.py",
+      "name": "SseStreamError",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "class:src/muscles_sse/adapter.py:SseValidationError",
+      "type": "class",
+      "filePath": "src/muscles_sse/adapter.py",
+      "name": "SseValidationError",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "class:src/muscles_sse/adapter.py:_CoreDispatcher",
+      "type": "class",
+      "filePath": "src/muscles_sse/adapter.py",
+      "name": "_CoreDispatcher",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "file:.github/workflows/ci.yml",
+      "type": "pipeline",
+      "filePath": ".github/workflows/ci.yml",
+      "language": "yaml",
+      "symbolCount": 0,
+      "lineCount": 11,
+      "complexity": "simple",
+      "pagerank": 0.095946,
+      "communityId": 1,
+      "tags": [
+        "config",
+        "ci"
+      ],
+      "summary": "GitHub Actions CI/CD workflow definition."
+    },
+    {
+      "id": "file:.github/workflows/release.yml",
+      "type": "pipeline",
+      "filePath": ".github/workflows/release.yml",
+      "language": "yaml",
+      "symbolCount": 0,
+      "lineCount": 24,
+      "complexity": "simple",
+      "pagerank": 0.095946,
+      "communityId": 2,
+      "tags": [
+        "config",
+        "ci"
+      ],
+      "summary": "GitHub Actions CI/CD workflow definition."
+    },
+    {
+      "id": "file:README.md",
+      "type": "document",
+      "filePath": "README.md",
+      "language": "markdown",
+      "symbolCount": 0,
+      "lineCount": 71,
+      "complexity": "simple",
+      "pagerank": 0.095946,
+      "communityId": 3,
+      "tags": [],
+      "summary": "Project overview and entry point for new readers."
+    },
+    {
+      "id": "file:docs/release-candidate.md",
+      "type": "document",
+      "filePath": "docs/release-candidate.md",
+      "language": "markdown",
+      "symbolCount": 0,
+      "lineCount": 9,
+      "complexity": "simple",
+      "pagerank": 0.095946,
+      "communityId": 4,
+      "tags": [],
+      "summary": "Documentation: release-candidate.md."
+    },
+    {
+      "id": "file:pyproject.toml",
+      "type": "config",
+      "filePath": "pyproject.toml",
+      "language": "toml",
+      "symbolCount": 0,
+      "lineCount": 23,
+      "complexity": "simple",
+      "pagerank": 0.095946,
+      "communityId": 5,
+      "tags": [
+        "config"
+      ],
+      "summary": "Python project metadata, dependencies, and build configuration."
+    },
+    {
+      "id": "file:src/muscles_sse/__init__.py",
+      "type": "file",
+      "filePath": "src/muscles_sse/__init__.py",
+      "language": "python",
+      "symbolCount": 1,
+      "lineCount": 7,
+      "complexity": "simple",
+      "pagerank": 0.177501,
+      "communityId": 0,
+      "tags": [],
+      "summary": "Application module __init__ (1 symbols).",
+      "primaryOwner": "Denis Butko"
+    },
+    {
+      "id": "file:src/muscles_sse/adapter.py",
+      "type": "file",
+      "filePath": "src/muscles_sse/adapter.py",
+      "language": "python",
+      "symbolCount": 27,
+      "lineCount": 301,
+      "complexity": "complex",
+      "pagerank": 0.246822,
+      "communityId": 0,
+      "tags": [],
+      "summary": "Application module adapter defining SseEvent, SseResponse, __post_init__.",
+      "primaryOwner": "Denis B"
+    },
+    {
+      "id": "file:tests/test_adapter.py",
+      "type": "file",
+      "filePath": "tests/test_adapter.py",
+      "language": "python",
+      "symbolCount": 30,
+      "lineCount": 356,
+      "complexity": "complex",
+      "pagerank": 0.095946,
+      "communityId": 0,
+      "tags": [
+        "test"
+      ],
+      "summary": "Tests for adapter.",
+      "primaryOwner": "Denis B"
+    },
+    {
+      "id": "function:src/muscles_sse/adapter.py:__init__",
+      "type": "function",
+      "filePath": "src/muscles_sse/adapter.py",
+      "name": "__init__",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:src/muscles_sse/adapter.py:__post_init__",
+      "type": "function",
+      "filePath": "src/muscles_sse/adapter.py",
+      "name": "__post_init__",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:src/muscles_sse/adapter.py:_adapt_stream_items",
+      "type": "function",
+      "filePath": "src/muscles_sse/adapter.py",
+      "name": "_adapt_stream_items",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:src/muscles_sse/adapter.py:_close_source",
+      "type": "function",
+      "filePath": "src/muscles_sse/adapter.py",
+      "name": "_close_source",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:src/muscles_sse/adapter.py:_close_stream_target",
+      "type": "function",
+      "filePath": "src/muscles_sse/adapter.py",
+      "name": "_close_stream_target",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:src/muscles_sse/adapter.py:_from_core_event",
+      "type": "function",
+      "filePath": "src/muscles_sse/adapter.py",
+      "name": "_from_core_event",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:src/muscles_sse/adapter.py:_iter_result",
+      "type": "function",
+      "filePath": "src/muscles_sse/adapter.py",
+      "name": "_iter_result",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:src/muscles_sse/adapter.py:_map_error",
+      "type": "function",
+      "filePath": "src/muscles_sse/adapter.py",
+      "name": "_map_error",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:src/muscles_sse/adapter.py:_stream_source_with_heartbeat",
+      "type": "function",
+      "filePath": "src/muscles_sse/adapter.py",
+      "name": "_stream_source_with_heartbeat",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:src/muscles_sse/adapter.py:_to_core_item",
+      "type": "function",
+      "filePath": "src/muscles_sse/adapter.py",
+      "name": "_to_core_item",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:src/muscles_sse/adapter.py:_to_core_stream",
+      "type": "function",
+      "filePath": "src/muscles_sse/adapter.py",
+      "name": "_to_core_stream",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:src/muscles_sse/adapter.py:_unwrap_result",
+      "type": "function",
+      "filePath": "src/muscles_sse/adapter.py",
+      "name": "_unwrap_result",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:src/muscles_sse/adapter.py:execute",
+      "type": "function",
+      "filePath": "src/muscles_sse/adapter.py",
+      "name": "execute",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:src/muscles_sse/adapter.py:format_event",
+      "type": "function",
+      "filePath": "src/muscles_sse/adapter.py",
+      "name": "format_event",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:src/muscles_sse/adapter.py:from_application",
+      "type": "function",
+      "filePath": "src/muscles_sse/adapter.py",
+      "name": "from_application",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:src/muscles_sse/adapter.py:stream_action",
+      "type": "function",
+      "filePath": "src/muscles_sse/adapter.py",
+      "name": "stream_action",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:src/muscles_sse/__init__.py",
+      "target": "file:src/muscles_sse/adapter.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py",
+      "target": "class:src/muscles_sse/adapter.py:ActionDispatcher",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py",
+      "target": "class:src/muscles_sse/adapter.py:SseAdapter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py",
+      "target": "class:src/muscles_sse/adapter.py:SseEvent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py",
+      "target": "class:src/muscles_sse/adapter.py:SsePermissionDenied",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py",
+      "target": "class:src/muscles_sse/adapter.py:SseResponse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py",
+      "target": "class:src/muscles_sse/adapter.py:SseStreamError",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py",
+      "target": "class:src/muscles_sse/adapter.py:SseValidationError",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py",
+      "target": "class:src/muscles_sse/adapter.py:_CoreDispatcher",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py",
+      "target": "function:src/muscles_sse/adapter.py:__init__",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py",
+      "target": "function:src/muscles_sse/adapter.py:__post_init__",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py",
+      "target": "function:src/muscles_sse/adapter.py:_adapt_stream_items",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py",
+      "target": "function:src/muscles_sse/adapter.py:_close_source",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py",
+      "target": "function:src/muscles_sse/adapter.py:_close_stream_target",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py",
+      "target": "function:src/muscles_sse/adapter.py:_from_core_event",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py",
+      "target": "function:src/muscles_sse/adapter.py:_iter_result",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py",
+      "target": "function:src/muscles_sse/adapter.py:_map_error",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py",
+      "target": "function:src/muscles_sse/adapter.py:_stream_source_with_heartbeat",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py",
+      "target": "function:src/muscles_sse/adapter.py:_to_core_item",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py",
+      "target": "function:src/muscles_sse/adapter.py:_to_core_stream",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py",
+      "target": "function:src/muscles_sse/adapter.py:_unwrap_result",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py",
+      "target": "function:src/muscles_sse/adapter.py:execute",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py",
+      "target": "function:src/muscles_sse/adapter.py:format_event",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py",
+      "target": "function:src/muscles_sse/adapter.py:from_application",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py",
+      "target": "function:src/muscles_sse/adapter.py:stream_action",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py::ActionDispatcher",
+      "target": "function:src/muscles_sse/adapter.py:execute",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py::SseAdapter",
+      "target": "function:src/muscles_sse/adapter.py:__init__",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py::SseAdapter",
+      "target": "function:src/muscles_sse/adapter.py:_adapt_stream_items",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py::SseAdapter",
+      "target": "function:src/muscles_sse/adapter.py:_close_source",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py::SseAdapter",
+      "target": "function:src/muscles_sse/adapter.py:_close_stream_target",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py::SseAdapter",
+      "target": "function:src/muscles_sse/adapter.py:_from_core_event",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py::SseAdapter",
+      "target": "function:src/muscles_sse/adapter.py:_iter_result",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py::SseAdapter",
+      "target": "function:src/muscles_sse/adapter.py:_map_error",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py::SseAdapter",
+      "target": "function:src/muscles_sse/adapter.py:_stream_source_with_heartbeat",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py::SseAdapter",
+      "target": "function:src/muscles_sse/adapter.py:_to_core_item",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py::SseAdapter",
+      "target": "function:src/muscles_sse/adapter.py:_to_core_stream",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py::SseAdapter",
+      "target": "function:src/muscles_sse/adapter.py:_unwrap_result",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py::SseAdapter",
+      "target": "function:src/muscles_sse/adapter.py:format_event",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py::SseAdapter",
+      "target": "function:src/muscles_sse/adapter.py:from_application",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py::SseAdapter",
+      "target": "function:src/muscles_sse/adapter.py:stream_action",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py::SseResponse",
+      "target": "function:src/muscles_sse/adapter.py:__post_init__",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py::SseStreamError",
+      "target": "function:src/muscles_sse/adapter.py:__init__",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py::_CoreDispatcher",
+      "target": "function:src/muscles_sse/adapter.py:__init__",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:src/muscles_sse/adapter.py::_CoreDispatcher",
+      "target": "function:src/muscles_sse/adapter.py:execute",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:tests/test_adapter.py",
+      "target": "file:src/muscles_sse/__init__.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 1.0
+    }
+  ],
+  "layers": [
+    {
+      "id": "layer:application",
+      "name": "Application",
+      "description": "",
+      "nodeIds": [
+        "file:README.md",
+        "file:pyproject.toml",
+        "file:src/muscles_sse/__init__.py",
+        "file:src/muscles_sse/adapter.py"
+      ],
+      "display_order": 0,
+      "order_basis": "canonical"
+    },
+    {
+      "id": "layer:config",
+      "name": "Config",
+      "description": "",
+      "nodeIds": [
+        "file:.github/workflows/ci.yml",
+        "file:.github/workflows/release.yml"
+      ],
+      "display_order": 1,
+      "order_basis": "canonical"
+    },
+    {
+      "id": "layer:docs-tooling",
+      "name": "Docs & Tooling",
+      "description": "",
+      "nodeIds": [
+        "file:docs/release-candidate.md"
+      ],
+      "display_order": 2,
+      "order_basis": "canonical"
+    },
+    {
+      "id": "layer:test",
+      "name": "Test",
+      "description": "",
+      "nodeIds": [
+        "file:tests/test_adapter.py"
+      ],
+      "display_order": 3,
+      "order_basis": "canonical"
+    }
+  ],
+  "tour": [
+    {
+      "order": 1,
+      "target_path": "README.md",
+      "page_type": "repo_overview",
+      "title": "README.md",
+      "depth": 0,
+      "kind": "overview",
+      "reason": "Start here for the end-to-end picture before diving into the code.",
+      "layer_id": "layer:application"
+    },
+    {
+      "order": 2,
+      "target_path": "src/muscles_sse/__init__.py",
+      "page_type": "file_page",
+      "title": "__init__.py",
+      "depth": 0,
+      "kind": "code",
+      "reason": "The walk's anchor \u2014 its imports fan out the widest in a repo with no single entry point.",
+      "layer_id": "layer:application"
+    },
+    {
+      "order": 3,
+      "target_path": "src/muscles_sse/adapter.py",
+      "page_type": "file_page",
+      "title": "adapter.py",
+      "depth": 1,
+      "kind": "code",
+      "reason": "Directly imported by the anchor above; a core collaborator.",
+      "layer_id": "layer:application"
+    },
+    {
+      "order": 4,
+      "target_path": "tests/test_adapter.py",
+      "page_type": "file_page",
+      "title": "test_adapter.py",
+      "depth": 2,
+      "kind": "code",
+      "reason": "The test suite \u2014 how the system's behavior is verified.",
+      "layer_id": "layer:test"
+    }
+  ],
+  "modules": [
+    {
+      "id": "module:application",
+      "name": "Application",
+      "path": "",
+      "layerId": "layer:application",
+      "nodeIds": [
+        "file:README.md",
+        "file:pyproject.toml",
+        "file:src/muscles_sse/__init__.py",
+        "file:src/muscles_sse/adapter.py"
+      ],
+      "wholeLayer": true,
+      "language": "python"
+    }
+  ]
+}

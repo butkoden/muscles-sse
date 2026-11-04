@@ -16,7 +16,7 @@ from muscles.core import (
     StreamResult,
 )
 
-from muscles_sse import (
+from muscles.sse import (
     SseAdapter,
     SseEvent,
     SsePermissionDenied,
